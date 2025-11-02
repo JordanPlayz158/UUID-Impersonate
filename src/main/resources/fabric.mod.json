@@ -1,0 +1,35 @@
+{
+	"schemaVersion": 1,
+	"id": "uuid-impersonate",
+	"version": "${version}",
+	"name": "UUID Impersonate",
+	"description": "Allows you to impersonate another player at the UUID level which allows you to load in as though you are really that player (NBT and all). This is helpful for tasks like cleaning up the inventories (and e-chest) of inactive players and to interact with mods as the player which can be useful if the mod does not have admin functionality/management.",
+	"authors": [
+		"JordanPlayz158"
+	],
+	"contact": {
+		"homepage": "https://jordanadams.dev",
+		"sources": "https://github.com/JordanPlayz158/UUID-Impersonate"
+	},
+	"license": "AGPLv3",
+	"icon": "assets/uuid-impersonate/icon.png",
+	"environment": "server",
+	"entrypoints": {
+		"main": [
+			{
+				"value": "dev.jordanadams.uuidimpersonate.UUIDImpersonate",
+				"adapter": "kotlin"
+			}
+		]
+	},
+	"mixins": [
+		"uuid-impersonate.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.16.10",
+		"minecraft": "~1.20.1",
+		"java": ">=17",
+		"fabric-api": "*",
+		"fabric-language-kotlin": "*"
+	}
+}
