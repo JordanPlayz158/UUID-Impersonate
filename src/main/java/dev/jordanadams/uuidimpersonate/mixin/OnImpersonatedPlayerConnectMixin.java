@@ -4,12 +4,11 @@ import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.authlib.GameProfile;
 import dev.jordanadams.uuidimpersonate.GameProfileMinimum;
 import dev.jordanadams.uuidimpersonate.HasImpersonator;
+import dev.jordanadams.uuidimpersonate.ImpersonateData;
 import dev.jordanadams.uuidimpersonate.UUIDImpersonate;
 import java.util.UUID;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerLoginNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
-import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -25,19 +24,17 @@ public abstract class OnImpersonatedPlayerConnectMixin {
   @Shadow
   GameProfile profile;
 
-  @Shadow
-  @Final
-  MinecraftServer server;
-
   @Inject(at = @At(value = "INVOKE_ASSIGN", target = "Lnet/minecraft/server/PlayerManager;checkCanJoin(Ljava/net/SocketAddress;Lcom/mojang/authlib/GameProfile;)Lnet/minecraft/text/Text;"), method = "acceptPlayer")
 	private void afterSourceProfileJoinCheck(CallbackInfo ci) {
-    UUID impersonatedUuid = UUIDImpersonate.INSTANCE.getImpersonatedUuid(GameProfileMinimum.Companion.from(profile));
+    ImpersonateData impersonateData = UUIDImpersonate.INSTANCE.getImpersonateData(GameProfileMinimum.Companion.from(profile));
 
-    if (impersonatedUuid == null) {
+    if (impersonateData == null) {
       return;
     }
 
-    String impersonatedName = UUIDImpersonate.INSTANCE.getOrCacheUsernameFromUuid(server, impersonatedUuid);
+    UUID impersonatedUuid = impersonateData.getUuid();
+
+    String impersonatedName = UUIDImpersonate.INSTANCE.getOrCacheUsernameFromUuid(impersonatedUuid);
 
     if (impersonatedName == null) {
       UUIDImpersonate.LOGGER.warn("Failed to impersonate {} (for {}) as a name could not be found in user cache or retrieved from Mojang's API.", impersonatedUuid, profile.getName());

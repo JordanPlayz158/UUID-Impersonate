@@ -8,7 +8,7 @@ class UUIDImpersonateImpersonateSubCommand : SubCommand {
     return "impersonate"
   }
 
-  override fun getRequires(): Predicate<ServerCommandSource>? {
+  override fun getRequires(): Predicate<ServerCommandSource> {
     return CommandPredicates.IS_IMPERSONATED.negate().and(CommandPredicates.IS_OWNER_PERMISSION_LEVEL)
   }
 

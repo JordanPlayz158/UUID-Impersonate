@@ -4,9 +4,12 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.mojang.authlib.GameProfile
 import com.mojang.brigadier.context.CommandContext
+import dev.jordanadams.uuidimpersonate.command.CommandUtility
 import dev.jordanadams.uuidimpersonate.command.UUIDImpersonateRootCommand
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.command.ServerCommandSource
@@ -29,48 +32,76 @@ object UUIDImpersonate : ModInitializer {
   val HTTP_CLIENT: HttpClient = HttpClient.newHttpClient()
   val GSON: Gson = Gson()
 
-  private val playerUuidToUuidToImpersonate = HashMap<GameProfileMinimum, UUID>()
+  private val playerUuidToUuidToImpersonate = HashMap<GameProfileMinimum, ImpersonateData>()
+
+  private lateinit var server: MinecraftServer
 
 	override fun onInitialize() {
+    ServerLifecycleEvents.SERVER_STARTED.register { server ->
+      this.server = server
+    }
+
     CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
-      UUIDImpersonateRootCommand.register(dispatcher)
+      CommandUtility.registerRootCommand(dispatcher, UUIDImpersonateRootCommand())
+    }
+
+    ServerPlayConnectionEvents.JOIN.register { handler, _, _ ->
+      val player = handler.player
+
+      if (player is HasImpersonator && player.`uUIDImpersonate$getImpersonator`() !== null) {
+        player.sendMessage(Text.literal(String.format(
+          "You are currently impersonating %s. Use `/uuidimpersonate clear` to stop impersonating", player.gameProfile.name)))
+      }
     }
 	}
 
-  fun impersonatePlayerFromCommand(context: CommandContext<ServerCommandSource>, targetUuid: UUID): Int {
-    val source = context.source
-    val sourcePlayer = source.playerOrThrow
+  fun impersonatePlayerFromCommand(context: CommandContext<ServerCommandSource>, targetUuid: UUID, modifyName: Boolean = true): Int {
+    return impersonatePlayerFromCommand(context, context.source.playerOrThrow, targetUuid, modifyName)
+  }
 
-    if (sourcePlayer.uuid == targetUuid) {
-      source.sendFeedback(
-        { Text.literal("You cannot impersonate yourself :P") },
+  fun impersonatePlayerFromCommand(context: CommandContext<ServerCommandSource>, player: ServerPlayerEntity, targetUuid: UUID, modifyName: Boolean = true): Int {
+    val error = impersonatePlayer(player.gameProfile.toMinimal(), targetUuid, modifyName)
+    if (error !== null) {
+      context.source.sendFeedback(
+        { Text.literal(error) },
         false)
       return 0
     }
 
-    impersonatePlayer(sourcePlayer, targetUuid)
     return 1
   }
 
-  fun impersonatePlayer(player: ServerPlayerEntity, target: UUID) {
-    impersonatePlayer(player.gameProfile.toMinimal(), target)
-
-    val impersonatedName = getOrCacheUsernameFromUuid(player.server, target)
-
-    val identifier = if (impersonatedName !== null) {
-      impersonatedName
-    } else {
-      target
+  /**
+   * @return string if error, otherwise null
+   */
+  fun impersonatePlayer(source: GameProfileMinimum, target: UUID, modifyName: Boolean = true, autoDisconnect: Boolean = true): String? {
+    if (source.id == target) {
+      return "You cannot impersonate yourself :P"
     }
 
-    player.networkHandler.disconnect(
-      Text.literal(
-        "You have been kicked and will be %s the next time you login."
-          .format(identifier)))
-  }
+    playerUuidToUuidToImpersonate[source] = ImpersonateData(target, modifyName)
 
-  fun impersonatePlayer(source: GameProfileMinimum, target: UUID) {
-    playerUuidToUuidToImpersonate[source] = target
+    if (autoDisconnect) {
+      val player = server.playerManager.getPlayer(source.id)
+
+      if (player !== null) {
+        val impersonatedName = getOrCacheUsernameFromUuid(target)
+
+        val identifier = if (impersonatedName !== null) {
+          impersonatedName
+        } else {
+          target
+        }
+
+        player.networkHandler.disconnect(
+          Text.literal(
+            "You have been kicked and will be %s the next time you login."
+              .format(identifier)))
+
+      }
+    }
+
+    return null
   }
 
   fun stopImpersonatePlayer(player: ServerPlayerEntity) {
@@ -90,7 +121,9 @@ object UUIDImpersonate : ModInitializer {
     playerUuidToUuidToImpersonate.remove(profile)
   }
 
-  fun getImpersonatedUuid(source: GameProfileMinimum) = playerUuidToUuidToImpersonate[source]
+  fun getImpersonateData(source: GameProfileMinimum) = playerUuidToUuidToImpersonate[source]
+
+  fun getOrCacheUsernameFromUuid(uuid: UUID) = getOrCacheUsernameFromUuid(server, uuid)
 
   fun getOrCacheUsernameFromUuid(server: MinecraftServer, uuid: UUID): String? {
     val userCache = server.userCache

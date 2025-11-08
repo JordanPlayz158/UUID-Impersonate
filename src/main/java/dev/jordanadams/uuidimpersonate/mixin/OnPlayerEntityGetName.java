@@ -3,6 +3,8 @@ package dev.jordanadams.uuidimpersonate.mixin;
 import com.mojang.authlib.GameProfile;
 import dev.jordanadams.uuidimpersonate.GameProfileMinimum;
 import dev.jordanadams.uuidimpersonate.HasImpersonator;
+import dev.jordanadams.uuidimpersonate.ImpersonateData;
+import dev.jordanadams.uuidimpersonate.UUIDImpersonate;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -27,7 +29,14 @@ public abstract class OnPlayerEntityGetName extends LivingEntity implements HasI
 
   @Inject(at = @At("HEAD"), method = "getName", cancellable = true)
   private void getName(CallbackInfoReturnable<Text> cir) {
-    if (uUIDImpersonate$getImpersonator() == null) {
+    GameProfileMinimum impersonator = uUIDImpersonate$getImpersonator();
+    if (impersonator == null) {
+      return;
+    }
+
+    ImpersonateData impersonateData = UUIDImpersonate.INSTANCE.getImpersonateData(impersonator);
+
+    if (impersonateData != null && !impersonateData.getModifyName()) {
       return;
     }
 

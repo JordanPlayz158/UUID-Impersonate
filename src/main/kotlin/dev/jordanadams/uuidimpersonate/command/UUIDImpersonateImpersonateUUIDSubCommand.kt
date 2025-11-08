@@ -13,9 +13,12 @@ class UUIDImpersonateImpersonateUUIDSubCommand : SubCommand {
     return CommandManager.argument("uuid", UuidArgumentType.uuid())
   }
 
+  override fun getChildren(): Array<SubCommand> {
+    return arrayOf(UUIDImpersonateImpersonateUUIDOtherPlayerSubCommand())
+  }
+
   override fun run(context: CommandContext<ServerCommandSource>): Int {
     val uuid = context.getArgument("uuid", UUID::class.java)
-
     return impersonatePlayerFromCommand(context, uuid)
   }
 }

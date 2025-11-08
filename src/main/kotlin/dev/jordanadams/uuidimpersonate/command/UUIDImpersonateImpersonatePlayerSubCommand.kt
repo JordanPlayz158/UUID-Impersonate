@@ -11,16 +11,15 @@ class UUIDImpersonateImpersonatePlayerSubCommand : SubCommand {
   override fun getArgument(): ArgumentBuilder<ServerCommandSource, *>? {
     return CommandManager.argument("player", GameProfileArgumentType.gameProfile())
   }
-  
+
+  override fun getChildren(): Array<SubCommand> {
+    return arrayOf(UUIDImpersonateImpersonateUUIDOtherPlayerSubCommand())
+  }
+
   override fun run(context: CommandContext<ServerCommandSource>): Int {
     val gameProfileArgument = context.getArgument("player", GameProfileArgumentType.GameProfileArgument::class.java)
-    val gameProfiles = gameProfileArgument.getNames(context.source)
-    val gameProfile = gameProfiles.firstOrNull()
-    
-    if (gameProfile === null) {
-      return 0
-    }
-    
+    val gameProfile = gameProfileArgument.getNames(context.source).first()
+
     return impersonatePlayerFromCommand(context, gameProfile.id)
   }
 }

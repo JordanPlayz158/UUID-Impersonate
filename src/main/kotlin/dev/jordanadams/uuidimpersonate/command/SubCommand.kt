@@ -12,8 +12,8 @@ interface SubCommand : Command<ServerCommandSource> {
   fun getName(): String? {
     return null
   }
-  fun getRequires(): Predicate<ServerCommandSource>? {
-    return null
+  fun getRequires(): Predicate<ServerCommandSource> {
+    return Predicate { true }
   }
 
   fun getArgument(): ArgumentBuilder<ServerCommandSource, *>? {
