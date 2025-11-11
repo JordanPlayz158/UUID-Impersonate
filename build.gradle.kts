@@ -10,7 +10,7 @@ val fabric_version: String by extra
 val fabric_kotlin_version: String by extra
 
 plugins {
-	id("fabric-loom") version "1.11-SNAPSHOT"
+	id("fabric-loom") version "1.13.4"
 	id("maven-publish")
 	id("org.jetbrains.kotlin.jvm") version "2.2.21"
 }
